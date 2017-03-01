@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  db:
+    image: express42/mongodb:dockermk-mar
+    networks:
+      - back
+    deploy:
+      restart_policy:
+        condition: on-failure
+      replicas: 1
+      placement:
+        constraints: [engine.labels.role == db]
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+  backend:
+    image: express42/blog_backend:dockermk-mar
+    environment:
+      - MONGO_HOST=blog_db
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+    networks:
+      - back
+      - front
+    depends_on:
+      - blog_db
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+  ui:
+    image: express42/blog_ui:dockermk-mar
+    environment:
+      - BLOG_BACKEND_HOST=blog_backend
+      - BLOG_BACKEND_PORT=9292
+    deploy:
+      mode: global
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "80:9292"
+    networks:
+      - front
+    depends_on:
+      - blog_backend
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+networks:
+  front:
+  back:
